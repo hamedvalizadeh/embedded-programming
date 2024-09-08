@@ -1,0 +1,1 @@
+https://lastminuteengineers.com/bme280-esp8266-weather-station/#:~:text=with%20this%20procedure.-,Wiring%20BME280%20Sensor%20to%20ESP8266%20NodeMCU,D2%20pin%20on%20your%20ESP8266.
