@@ -18,8 +18,11 @@ const char *password = "!!P@rda%1388%";
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
+
+#define LEDPIN 16  // D0
+
 // --------------------------------------- DHT22 ---------------------------------------
-#define DHT22PIN 4  //pin gpio 4 in sensor = D2
+#define DHT22PIN 2  //pin gpio 4 in sensor = D4
 #define DHT22TYPE DHT22
 #define DATA_GATHER_INTERVAL_IN_MILISECOND 60000
 DHT dht22(DHT22PIN, DHT22TYPE);
@@ -61,9 +64,36 @@ void write_to_file(String content) {
   }
 }
 
+// --------------------------------------- SHT3x ---------------------------------------
+#define SHT3X_ADDRESS 0x44  // Declaration for SSD1306 display connected using I2C
+Adafruit_SHT31 sht31 = Adafruit_SHT31();
+
+void setup_sht3x() {
+  if (!sht31.begin(SHT3X_ADDRESS)) {
+    Serial.println("Check circuit. SHT31 not found!");
+    while (1) delay(1);
+  }
+}
+
+String get_data_sht3x() {
+  float temp = sht31.readTemperature();
+  float hum = sht31.readHumidity();
+
+  if (!isnan(temp) && !isnan(hum)) {
+    String stValue = String(temp) + "," + String(hum);
+    return stValue;
+  }
+  return "SHT_NCT,SHT_NCH";
+}
+
+//CPU
 void setup() {
   Serial.begin(115200);
   
+  pinMode(LEDPIN, OUTPUT);
+  digitalWrite(LEDPIN, LOW);
+
+  setup_sht3x();
   dht22.begin();
 
   if (!SD.begin(15)) {
@@ -93,15 +123,14 @@ void loop() {
   bool readCorrectValue = get_dht22_data(data);
 
   if (readCorrectValue != true) {
+    digitalWrite(LEDPIN, LOW);
     return;
   }
 
-  String tValue = String(data[0].GetData());
-  String hValue = String(data[1].GetData());
-
+  String dhtValue = String(data[0].GetData()) + "," + String(data[1].GetData());
+  String shtValue = get_data_sht3x();
+  
   lastTime = millis();
-
-  //get_data_sht3x();
 
   timeClient.update();
   time_t epochTime = timeClient.getEpochTime();
@@ -109,8 +138,10 @@ void loop() {
   int monthDay = ptm->tm_mday;
   int currentMonth = ptm->tm_mon+1;
   int currentYear = ptm->tm_year+1900;
-  String currentDateTime = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay) + " " + timeClient.getFormattedTime() + "," + tValue + "," + hValue;
+  String currentDateTime = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay) + " " + timeClient.getFormattedTime() + "," + dhtValue + "," + shtValue;
   
   Serial.println(currentDateTime);
   write_to_file(currentDateTime);
+  
+  digitalWrite(LEDPIN, HIGH);
 }
